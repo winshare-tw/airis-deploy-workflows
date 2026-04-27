@@ -1,0 +1,9 @@
+apiVersion: v2
+name: airis-sandbox
+description: One sandbox unit for an AiRis service (webapp / api / future tools)
+type: application
+version: 0.1.0
+appVersion: "0"
+maintainers:
+  - name: winshare-tw
+    url: https://github.com/winshare-tw

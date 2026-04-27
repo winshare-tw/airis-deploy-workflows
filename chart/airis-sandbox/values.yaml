@@ -1,0 +1,42 @@
+# All values are required at render time unless a default is shown here.
+# render.sh enforces required-but-empty as failure.
+
+# Application name; used as image repo name and label `app=`.
+app: ""
+
+# Container port. Required.
+port: 0
+
+# Path used by readiness/liveness probes.
+healthPath: "/"
+
+# Sandbox identity.
+host: ""        # "<word>-<hex4>.winshare.tw" — required.
+instance: ""    # "<word>-<hex4>"             — required (= image tag).
+
+# Optional alias (e.g. "app", "api"). Empty disables the latest label.
+alias: ""
+
+# True = this sandbox claims the latest=true label at render time.
+promote: true
+
+# TTL — RFC3339 absolute expiry timestamp, computed by render.sh.
+expiresAt: ""
+
+# Image
+image:
+  registry: ghcr.io/winshare-tw
+  repository: ""    # defaults to .Values.app
+  tag: ""           # required (= .Values.instance)
+  pullSecret: regcred
+
+# Resources
+resources:
+  cpu: "500m"
+  memory: "512Mi"
+
+# Target namespace
+namespace: airis
+
+# Ingress class used by ingress-nginx
+ingressClassName: nginx
