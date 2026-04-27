@@ -1,0 +1,73 @@
+{{- include "airis-sandbox.requireNonEmpty" (list "app" .Values.app) -}}
+{{- include "airis-sandbox.requireNonEmpty" (list "instance" .Values.instance) -}}
+{{- include "airis-sandbox.requireNonEmpty" (list "host" .Values.host) -}}
+{{- include "airis-sandbox.requireNonEmpty" (list "image.tag" .Values.image.tag) -}}
+{{- include "airis-sandbox.requireNonEmpty" (list "expiresAt" .Values.expiresAt) -}}
+{{- if not (gt (int .Values.port) 0) -}}
+{{- fail "airis-sandbox: required value `port` must be a positive integer" -}}
+{{- end -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "airis-sandbox.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "airis-sandbox.labels" . | nindent 4 }}
+  annotations:
+    airis.winshare.tw/expires-at: {{ .Values.expiresAt | quote }}
+    airis.winshare.tw/host: {{ .Values.host | quote }}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "airis-sandbox.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "airis-sandbox.labels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: {{ include "airis-sandbox.image" . | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthPath | quote }}
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthPath | quote }}
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: {{ .Values.resources.cpu | quote }}
+              memory: {{ .Values.resources.memory | quote }}
+            limits:
+              cpu: {{ .Values.resources.cpu | quote }}
+              memory: {{ .Values.resources.memory | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL

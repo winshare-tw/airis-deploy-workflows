@@ -1,0 +1,11 @@
+app: airis-webapp
+instance: bold-7f3e
+host: bold-7f3e.winshare.tw
+alias: app
+promote: true
+port: 8080
+healthPath: /
+expiresAt: "2026-05-04T08:00:00Z"
+image:
+  registry: ghcr.io/winshare-tw
+  tag: bold-7f3e
