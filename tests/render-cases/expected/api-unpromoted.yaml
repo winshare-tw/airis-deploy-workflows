@@ -1,0 +1,120 @@
+---
+# Source: airis-sandbox/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox-airis-webapp-api-calm-9a21
+  namespace: airis
+  labels:
+    app: airis-webapp-api
+    instance: calm-9a21
+    managed-by: airis-deploy-workflows
+spec:
+  type: ClusterIP
+  selector:
+    app: airis-webapp-api
+    instance: calm-9a21
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+---
+# Source: airis-sandbox/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sandbox-airis-webapp-api-calm-9a21
+  namespace: airis
+  labels:
+    app: airis-webapp-api
+    instance: calm-9a21
+    managed-by: airis-deploy-workflows
+  annotations:
+    airis.winshare.tw/expires-at: "2026-05-04T08:00:00Z"
+    airis.winshare.tw/host: "calm-9a21.winshare.tw"
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: airis-webapp-api
+      instance: calm-9a21
+  template:
+    metadata:
+      labels:
+        app: airis-webapp-api
+        instance: calm-9a21
+        managed-by: airis-deploy-workflows
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: "ghcr.io/winshare-tw/airis-webapp-api:calm-9a21"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8900
+          readinessProbe:
+            httpGet:
+              path: "/healthz"
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: "/healthz"
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+---
+# Source: airis-sandbox/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sandbox-airis-webapp-api-calm-9a21
+  namespace: airis
+  labels:
+    app: airis-webapp-api
+    instance: calm-9a21
+    managed-by: airis-deploy-workflows
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "calm-9a21.winshare.tw"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sandbox-airis-webapp-api-calm-9a21
+                port:
+                  number: 80

@@ -1,0 +1,11 @@
+app: airis-webapp-api
+instance: calm-9a21
+host: calm-9a21.winshare.tw
+alias: ""
+promote: false
+port: 8900
+healthPath: /healthz
+expiresAt: "2026-05-04T08:00:00Z"
+image:
+  registry: ghcr.io/winshare-tw
+  tag: calm-9a21

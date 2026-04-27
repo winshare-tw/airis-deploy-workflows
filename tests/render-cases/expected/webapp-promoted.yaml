@@ -1,0 +1,128 @@
+---
+# Source: airis-sandbox/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox-airis-webapp-bold-7f3e
+  namespace: airis
+  labels:
+    app: airis-webapp
+    instance: bold-7f3e
+    managed-by: airis-deploy-workflows
+    latest: "true"
+    alias: "app"
+spec:
+  type: ClusterIP
+  selector:
+    app: airis-webapp
+    instance: bold-7f3e
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+---
+# Source: airis-sandbox/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sandbox-airis-webapp-bold-7f3e
+  namespace: airis
+  labels:
+    app: airis-webapp
+    instance: bold-7f3e
+    managed-by: airis-deploy-workflows
+    latest: "true"
+    alias: "app"
+  annotations:
+    airis.winshare.tw/expires-at: "2026-05-04T08:00:00Z"
+    airis.winshare.tw/host: "bold-7f3e.winshare.tw"
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: airis-webapp
+      instance: bold-7f3e
+  template:
+    metadata:
+      labels:
+        app: airis-webapp
+        instance: bold-7f3e
+        managed-by: airis-deploy-workflows
+        latest: "true"
+        alias: "app"
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: "ghcr.io/winshare-tw/airis-webapp:bold-7f3e"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: "/"
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: "/"
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+---
+# Source: airis-sandbox/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sandbox-airis-webapp-bold-7f3e
+  namespace: airis
+  labels:
+    app: airis-webapp
+    instance: bold-7f3e
+    managed-by: airis-deploy-workflows
+    latest: "true"
+    alias: "app"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "bold-7f3e.winshare.tw"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sandbox-airis-webapp-bold-7f3e
+                port:
+                  number: 80
