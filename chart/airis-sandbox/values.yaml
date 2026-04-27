@@ -38,5 +38,6 @@ resources:
 # Target namespace
 namespace: airis
 
-# Ingress class used by ingress-nginx
-ingressClassName: nginx
+# Ingress class. Default = `traefik` (k3s ships traefik out of the box).
+# Override in caller for clusters with a different IngressClass.
+ingressClassName: traefik

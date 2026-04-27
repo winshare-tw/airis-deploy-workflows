@@ -110,11 +110,8 @@ metadata:
     managed-by: airis-deploy-workflows
     latest: "true"
     alias: "app"
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 50m
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
     - host: "bold-7f3e.winshare.tw"
       http:

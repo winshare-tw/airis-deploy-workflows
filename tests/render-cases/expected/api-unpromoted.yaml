@@ -102,11 +102,8 @@ metadata:
     app: airis-webapp-api
     instance: calm-9a21
     managed-by: airis-deploy-workflows
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 50m
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
     - host: "calm-9a21.winshare.tw"
       http:

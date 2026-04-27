@@ -5,9 +5,6 @@ metadata:
   namespace: {{ .Values.namespace }}
   labels:
     {{- include "airis-sandbox.labels" . | nindent 4 }}
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 50m
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
 spec:
   ingressClassName: {{ .Values.ingressClassName }}
   rules:
