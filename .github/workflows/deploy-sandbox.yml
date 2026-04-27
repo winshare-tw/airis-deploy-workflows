@@ -54,24 +54,21 @@ jobs:
         with:
           version: v3.14.4
 
-      - name: Install tooling (no-sudo, ~/.local/bin)
+      - name: Install tooling (no-sudo, ~/.local/bin) — yq + buildctl
         shell: bash
         run: |
           set -e
           mkdir -p "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
           curl -sSL -o "$HOME/.local/bin/yq" https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
           chmod +x "$HOME/.local/bin/yq"
 
-      # NOTE: docker buildx requires a privileged/DinD ARC runner tier.
-      # The default `arc-winshare-default` tier has no docker daemon, so this
-      # job MUST run on a different runner label when image building is needed.
-      # If you see "docker: command not found" or buildx connection errors,
-      # ask the platform team to point this workflow at a DinD-enabled runner
-      # (e.g. arc-winshare-build) by overriding `runs-on` from the caller, OR
-      # swap docker/build-push-action for kaniko-based image building.
-      - name: Verify docker buildx (DinD runner expected)
-        run: docker buildx version
+          # buildctl talks to the in-cluster rootless buildkitd over gRPC.
+          # No docker daemon needed on the runner side.
+          curl -sSL https://github.com/moby/buildkit/releases/download/v0.13.2/buildkit-v0.13.2.linux-amd64.tar.gz \
+            | tar -xz -C "$HOME/.local" --strip-components=1 bin/buildctl
+          buildctl --version
 
       - name: Clone gitops repo
         env:
@@ -98,22 +95,34 @@ jobs:
             echo "latest_host=" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Log into GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push image (buildctl → in-cluster buildkitd)
+        env:
+          BUILDKIT_HOST: tcp://buildkitd.buildkit.svc.cluster.local:1234
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_REF:     ${{ inputs.image_registry }}/${{ inputs.app }}:${{ steps.host.outputs.instance }}
+          CACHE_REF:     ${{ inputs.image_registry }}/${{ inputs.app }}:buildcache
+        run: |
+          set -euo pipefail
 
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: consumer/${{ inputs.context }}
-          file:    consumer/${{ inputs.context }}/${{ inputs.dockerfile }}
-          push:    true
-          tags:    ${{ inputs.image_registry }}/${{ inputs.app }}:${{ steps.host.outputs.instance }}
-          cache-from: type=gha,scope=${{ inputs.app }}
-          cache-to:   type=gha,mode=max,scope=${{ inputs.app }}
+          # Registry auth: write a Docker-compatible config.json that buildctl reads
+          # from $DOCKER_CONFIG (defaults to ~/.docker).
+          mkdir -p "$HOME/.docker"
+          AUTH=$(printf '%s:%s' "$GHCR_USERNAME" "$GHCR_TOKEN" | base64 -w0)
+          cat > "$HOME/.docker/config.json" <<EOF
+          {"auths":{"ghcr.io":{"auth":"$AUTH"}}}
+          EOF
+
+          buildctl build \
+            --frontend dockerfile.v0 \
+            --local context="$GITHUB_WORKSPACE/consumer/${{ inputs.context }}" \
+            --local dockerfile="$GITHUB_WORKSPACE/consumer/${{ inputs.context }}" \
+            --opt filename="${{ inputs.dockerfile }}" \
+            --output "type=image,name=${IMAGE_REF},push=true" \
+            --export-cache "type=registry,ref=${CACHE_REF},mode=max" \
+            --import-cache "type=registry,ref=${CACHE_REF}"
+
+          echo "pushed: $IMAGE_REF"
 
       - name: Render manifest into gitops worktree
         env:
