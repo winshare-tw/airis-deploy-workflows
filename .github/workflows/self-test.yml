@@ -1,0 +1,62 @@
+name: self-test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: chart lint + render + bats
+    runs-on: arc-winshare-default
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          set -e
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bats
+          curl -sSL https://get.helm.sh/helm-v3.14.4-linux-amd64.tar.gz | tar -xz -C /tmp
+          sudo mv /tmp/linux-amd64/helm /usr/local/bin/helm
+          sudo curl -sSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          curl -sSL -o /tmp/kc.tgz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          sudo tar -xzf /tmp/kc.tgz -C /usr/local/bin kubeconform
+
+      - name: helm lint
+        run: helm lint chart/airis-sandbox
+
+      - name: bats — new-host / promote / destroy
+        run: bats tests/bats/
+
+      - name: render every fixture and kubeconform it
+        run: |
+          set -e
+          for f in tests/render-cases/*.yaml; do
+            case "$f" in *"/expected/"*) continue ;; esac
+            name=$(basename "$f" .yaml)
+            helm template chart/airis-sandbox -f "$f" > "/tmp/${name}.rendered.yaml"
+            kubeconform -strict -summary "/tmp/${name}.rendered.yaml"
+          done
+
+      - name: golden render diff
+        run: |
+          set -e
+          for f in tests/render-cases/*.yaml; do
+            case "$f" in *"/expected/"*) continue ;; esac
+            name=$(basename "$f" .yaml)
+            helm template chart/airis-sandbox -f "$f" > "/tmp/${name}.rendered.yaml"
+            diff -u "tests/render-cases/expected/${name}.yaml" "/tmp/${name}.rendered.yaml"
+          done
+
+      - name: yamllint workflows
+        run: |
+          if ! command -v yamllint >/dev/null; then
+            sudo apt-get install -y -qq yamllint
+          fi
+          yamllint -d '{extends: default, rules: {line-length: disable, comments: {min-spaces-from-content: 1}, document-start: disable, indentation: {indent-sequences: consistent}, truthy: disable, braces: {max-spaces-inside: 1}, colons: disable, commas: disable, empty-lines: disable, brackets: disable}}' .github/workflows
