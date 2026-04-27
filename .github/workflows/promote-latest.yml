@@ -24,10 +24,12 @@ jobs:
           ref: ${{ env.AIRIS_DEPLOY_REF }}
           path: deploy-workflows
 
-      - name: Install yq
+      - name: Install yq (no-sudo)
         run: |
-          sudo curl -sSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          curl -sSL -o "$HOME/.local/bin/yq" https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
+          chmod +x "$HOME/.local/bin/yq"
 
       - name: Clone gitops
         env:

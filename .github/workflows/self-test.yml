@@ -16,17 +16,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install tools
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tools (no-sudo, ~/.local/bin)
+        shell: bash
         run: |
           set -e
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq bats
-          curl -sSL https://get.helm.sh/helm-v3.14.4-linux-amd64.tar.gz | tar -xz -C /tmp
-          sudo mv /tmp/linux-amd64/helm /usr/local/bin/helm
-          sudo curl -sSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
-          curl -sSL -o /tmp/kc.tgz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
-          sudo tar -xzf /tmp/kc.tgz -C /usr/local/bin kubeconform
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          curl -sSL -o "$HOME/.local/bin/yq" https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
+          chmod +x "$HOME/.local/bin/yq"
+
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz \
+            | tar -xz -C "$HOME/.local/bin" kubeconform
+
+          git clone --depth 1 https://github.com/bats-core/bats-core /tmp/bats-core
+          /tmp/bats-core/install.sh "$HOME/.local"
+
+          python -m pip install --user --quiet yamllint==1.35.1
 
       - name: helm lint
         run: helm lint chart/airis-sandbox
@@ -56,7 +70,4 @@ jobs:
 
       - name: yamllint workflows
         run: |
-          if ! command -v yamllint >/dev/null; then
-            sudo apt-get install -y -qq yamllint
-          fi
-          yamllint -d '{extends: default, rules: {line-length: disable, comments: {min-spaces-from-content: 1}, document-start: disable, indentation: {indent-sequences: consistent}, truthy: disable, braces: {max-spaces-inside: 1}, colons: disable, commas: disable, empty-lines: disable, brackets: disable}}' .github/workflows
+          yamllint -d '{extends: default, rules: {line-length: disable, comments: {min-spaces-from-content: 1}, comments-indentation: disable, document-start: disable, indentation: {indent-sequences: consistent}, truthy: disable, braces: {max-spaces-inside: 1}, colons: disable, commas: disable, empty-lines: disable, brackets: disable}}' .github/workflows

@@ -50,14 +50,28 @@ jobs:
           ref: ${{ env.AIRIS_DEPLOY_REF }}
           path: deploy-workflows
 
-      - name: Install tooling
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Install tooling (no-sudo, ~/.local/bin)
+        shell: bash
         run: |
           set -e
-          curl -sSL https://get.helm.sh/helm-v3.14.4-linux-amd64.tar.gz | tar -xz -C /tmp
-          sudo mv /tmp/linux-amd64/helm /usr/local/bin/helm
-          sudo curl -sSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
-          docker buildx version
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          curl -sSL -o "$HOME/.local/bin/yq" https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
+          chmod +x "$HOME/.local/bin/yq"
+
+      # NOTE: docker buildx requires a privileged/DinD ARC runner tier.
+      # The default `arc-winshare-default` tier has no docker daemon, so this
+      # job MUST run on a different runner label when image building is needed.
+      # If you see "docker: command not found" or buildx connection errors,
+      # ask the platform team to point this workflow at a DinD-enabled runner
+      # (e.g. arc-winshare-build) by overriding `runs-on` from the caller, OR
+      # swap docker/build-push-action for kaniko-based image building.
+      - name: Verify docker buildx (DinD runner expected)
+        run: docker buildx version
 
       - name: Clone gitops repo
         env:
