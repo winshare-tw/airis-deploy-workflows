@@ -1,0 +1,62 @@
+name: promote-latest
+
+on:
+  workflow_call:
+    inputs:
+      app:   { type: string, required: true }
+      host:  { type: string, required: true }
+      alias: { type: string, required: true }
+    secrets:
+      GITOPS_TOKEN:
+        required: true
+
+env:
+  AIRIS_DEPLOY_REF: v1
+
+jobs:
+  promote:
+    runs-on: arc-winshare-default
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: winshare-tw/airis-deploy-workflows
+          ref: ${{ env.AIRIS_DEPLOY_REF }}
+          path: deploy-workflows
+
+      - name: Install yq
+        run: |
+          sudo curl -sSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Clone gitops
+        env:
+          GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+        run: |
+          source deploy-workflows/scripts/lib.sh
+          clone_gitops "$GITHUB_WORKSPACE/gitops"
+
+      - name: Run promote
+        env:
+          APP:             ${{ inputs.app }}
+          TARGET_INSTANCE: ${{ inputs.host }}
+          ALIAS:           ${{ inputs.alias }}
+          GITOPS_DIR:      ${{ github.workspace }}/gitops
+        run: |
+          export TARGET_INSTANCE="${TARGET_INSTANCE%%.*}"
+          deploy-workflows/scripts/promote.sh
+
+      - name: Commit and push
+        run: |
+          set -e
+          cd "$GITHUB_WORKSPACE/gitops"
+          git add -A sandboxes/${{ inputs.app }}/
+          if git diff --staged --quiet; then
+            echo "nothing to commit (already latest?)"; exit 0
+          fi
+          git commit -m "promote(${{ inputs.app }}): alias=${{ inputs.alias }} → ${{ inputs.host }}"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main && git rebase origin/main
+          done
+          exit 1
