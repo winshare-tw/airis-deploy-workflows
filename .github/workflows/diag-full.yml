@@ -52,9 +52,6 @@ on:
       GITOPS_SSH_KEY:
         required: false
 
-env:
-  AIRIS_DEPLOY_REF: v1
-
 jobs:
   deploy:
     runs-on: arc-winshare-default
