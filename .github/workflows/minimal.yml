@@ -1,0 +1,12 @@
+name: minimal
+on:
+  workflow_call:
+    inputs:
+      msg:
+        type: string
+        default: "hello"
+jobs:
+  greet:
+    runs-on: arc-winshare-default
+    steps:
+      - run: echo "${{ inputs.msg }}"
