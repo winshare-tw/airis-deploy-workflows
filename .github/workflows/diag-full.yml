@@ -23,6 +23,21 @@ on:
       zone:
         type: string
         default: "winshare.tw"
+      ttl:
+        type: string
+        default: "7d"
+      promote:
+        type: boolean
+        default: true
+      resources_cpu:
+        type: string
+        default: "500m"
+      resources_mem:
+        type: string
+        default: "512Mi"
+      image_registry:
+        type: string
+        default: "ghcr.io/winshare-tw"
     outputs:
       host:
         value: ${{ jobs.deploy.outputs.host }}
