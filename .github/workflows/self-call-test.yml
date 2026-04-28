@@ -1,0 +1,9 @@
+name: self-call-test
+on: workflow_dispatch
+jobs:
+  call:
+    uses: ./.github/workflows/deploy-sandbox.yml
+    with:
+      app: airis-webapp
+      port: 8080
+    secrets: inherit
