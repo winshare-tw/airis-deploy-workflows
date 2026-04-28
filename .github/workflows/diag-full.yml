@@ -1,5 +1,4 @@
 name: diag-full
-
 on:
   workflow_call:
     inputs:
@@ -64,143 +63,12 @@ jobs:
       contents: read
       packages: write
     outputs:
-      host:        ${{ steps.host.outputs.host }}
-      instance:    ${{ steps.host.outputs.instance }}
-      latest_host: ${{ steps.host.outputs.latest_host }}
+      host:        ${{ steps.h.outputs.host }}
+      instance:    ${{ steps.h.outputs.instance }}
+      latest_host: ${{ steps.h.outputs.latest_host }}
     steps:
-      - name: Checkout consumer repo
-        uses: actions/checkout@v4
-        with:
-          path: consumer
-
-      - name: Checkout airis-deploy-workflows (this repo, pinned)
-        uses: actions/checkout@v4
-        with:
-          repository: winshare-tw/airis-deploy-workflows
-          ref: ${{ env.AIRIS_DEPLOY_REF }}
-          path: deploy-workflows
-
-      - uses: azure/setup-helm@v4
-        with:
-          version: v3.14.4
-
-      - name: Install tooling (no-sudo, ~/.local/bin) — yq + buildctl
-        shell: bash
+      - id: h
         run: |
-          set -e
-          mkdir -p "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-          curl -sSL -o "$HOME/.local/bin/yq" https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
-          chmod +x "$HOME/.local/bin/yq"
-
-          # buildctl talks to the in-cluster rootless buildkitd over gRPC.
-          # No docker daemon needed on the runner side.
-          curl -sSL https://github.com/moby/buildkit/releases/download/v0.13.2/buildkit-v0.13.2.linux-amd64.tar.gz \
-            | tar -xz -C "$HOME/.local" --strip-components=1 bin/buildctl
-          buildctl --version
-
-      - name: Clone gitops repo
-        env:
-          GITOPS_SSH_KEY: ${{ secrets.GITOPS_SSH_KEY }}
-        run: |
-          set -e
-          source deploy-workflows/scripts/lib.sh
-          clone_gitops "$GITHUB_WORKSPACE/gitops"
-
-      - id: host
-        name: Generate sandbox host
-        env:
-          ZONE: ${{ inputs.zone }}
-          AVOID_DIR: ${{ github.workspace }}/gitops/sandboxes/${{ inputs.app }}
-        run: |
-          set -e
-          out=$(deploy-workflows/scripts/new-host.sh)
-          eval "$out"
-          echo "host=$HOST" >> "$GITHUB_OUTPUT"
-          echo "instance=$INSTANCE" >> "$GITHUB_OUTPUT"
-          if [ -n "${{ inputs.alias }}" ] && [ "${{ inputs.promote }}" = "true" ]; then
-            echo "latest_host=${{ inputs.alias }}.${{ inputs.zone }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "latest_host=" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Build and push image (buildctl → in-cluster buildkitd)
-        env:
-          BUILDKIT_HOST: tcp://buildkitd.buildkit.svc.cluster.local:1234
-          GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
-          IMAGE_REF:     ${{ inputs.image_registry }}/${{ inputs.app }}:${{ steps.host.outputs.instance }}
-          CACHE_REF:     ${{ inputs.image_registry }}/${{ inputs.app }}:buildcache
-        run: |
-          set -euo pipefail
-
-          # Registry auth: write a Docker-compatible config.json that buildctl reads
-          # from $DOCKER_CONFIG (defaults to ~/.docker).
-          mkdir -p "$HOME/.docker"
-          AUTH=$(printf '%s:%s' "$GHCR_USERNAME" "$GHCR_TOKEN" | base64 -w0)
-          cat > "$HOME/.docker/config.json" <<EOF
-          {"auths":{"ghcr.io":{"auth":"$AUTH"}}}
-          EOF
-
-          buildctl build \
-            --frontend dockerfile.v0 \
-            --local context="$GITHUB_WORKSPACE/consumer/${{ inputs.context }}" \
-            --local dockerfile="$GITHUB_WORKSPACE/consumer/${{ inputs.context }}" \
-            --opt filename="${{ inputs.dockerfile }}" \
-            --output "type=image,name=${IMAGE_REF},push=true" \
-            --export-cache "type=registry,ref=${CACHE_REF},mode=max" \
-            --import-cache "type=registry,ref=${CACHE_REF}"
-
-          echo "pushed: $IMAGE_REF"
-
-      - name: Render manifest into gitops worktree
-        env:
-          APP:            ${{ inputs.app }}
-          INSTANCE:       ${{ steps.host.outputs.instance }}
-          HOST:           ${{ steps.host.outputs.host }}
-          PORT:           ${{ inputs.port }}
-          HEALTH_PATH:    ${{ inputs.health_path }}
-          ALIAS:          ${{ inputs.alias }}
-          PROMOTE:        ${{ inputs.promote }}
-          TTL:            ${{ inputs.ttl }}
-          IMAGE_TAG:      ${{ steps.host.outputs.instance }}
-          IMAGE_REGISTRY: ${{ inputs.image_registry }}
-          RES_CPU:        ${{ inputs.resources_cpu }}
-          RES_MEM:        ${{ inputs.resources_mem }}
-          GITOPS_DIR:     ${{ github.workspace }}/gitops
-        run: deploy-workflows/scripts/render.sh
-
-      - name: Promote within gitops worktree (if requested)
-        if: inputs.promote == true && inputs.alias != ''
-        env:
-          APP:             ${{ inputs.app }}
-          TARGET_INSTANCE: ${{ steps.host.outputs.instance }}
-          ALIAS:           ${{ inputs.alias }}
-          GITOPS_DIR:      ${{ github.workspace }}/gitops
-        run: deploy-workflows/scripts/promote.sh
-
-      - name: Commit and push to gitops
-        run: |
-          set -e
-          cd "$GITHUB_WORKSPACE/gitops"
-          git add sandboxes/${{ inputs.app }}/
-          if git diff --staged --quiet; then
-            echo "no manifest changes (sandbox already exists?)"; exit 1
-          fi
-          git commit -m "deploy(${{ inputs.app }}): ${{ steps.host.outputs.instance }} (promote=${{ inputs.promote }})"
-          for attempt in 1 2 3; do
-            if git push origin HEAD:main; then exit 0; fi
-            git fetch origin main
-            git rebase origin/main
-          done
-          echo "::error::failed to push gitops repo after 3 retries"
-          exit 1
-
-      - name: Summary
-        run: |
-          {
-            echo "host:        ${{ steps.host.outputs.host }}"
-            echo "instance:    ${{ steps.host.outputs.instance }}"
-            echo "latest_host: ${{ steps.host.outputs.latest_host }}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "host=hello.example.com" >> "$GITHUB_OUTPUT"
+          echo "instance=hello" >> "$GITHUB_OUTPUT"
+          echo "latest_host=" >> "$GITHUB_OUTPUT"
