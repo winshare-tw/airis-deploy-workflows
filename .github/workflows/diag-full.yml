@@ -5,60 +5,25 @@ on:
       app:
         type: string
         required: true
-      dockerfile:
-        type: string
-        default: "Dockerfile"
-      context:
-        type: string
-        default: "."
       port:
         type: number
         required: true
-      health_path:
-        type: string
-        default: "/"
-      alias:
-        type: string
-        default: ""
-      zone:
-        type: string
-        default: "winshare.tw"
-      ttl:
-        type: string
-        default: "7d"
-      promote:
-        type: boolean
-        default: true
-      resources_cpu:
-        type: string
-        default: "500m"
-      resources_mem:
-        type: string
-        default: "512Mi"
-      image_registry:
-        type: string
-        default: "ghcr.io/winshare-tw"
     outputs:
       host:
-        description: "FQDN of the new sandbox"
+        description: "FQDN"
         value: ${{ jobs.deploy.outputs.host }}
       instance:
-        description: "Instance id (= image tag)"
+        description: "tag"
         value: ${{ jobs.deploy.outputs.instance }}
       latest_host:
-        description: "alias.winshare.tw if promoted"
+        description: "alias"
         value: ${{ jobs.deploy.outputs.latest_host }}
     secrets:
       GITOPS_SSH_KEY:
         required: false
-
 jobs:
   deploy:
     runs-on: arc-winshare-default
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      packages: write
     outputs:
       host:        ${{ steps.h.outputs.host }}
       instance:    ${{ steps.h.outputs.instance }}
