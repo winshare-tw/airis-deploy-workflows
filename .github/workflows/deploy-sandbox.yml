@@ -101,8 +101,8 @@ jobs:
           # buildctl talks to the in-cluster rootless buildkitd over gRPC.
           # No docker daemon needed on the runner side.
           curl -sSL https://github.com/moby/buildkit/releases/download/v0.13.2/buildkit-v0.13.2.linux-amd64.tar.gz \
-            | tar -xz -C "$HOME/.local" --strip-components=1 bin/buildctl
-          buildctl --version
+            | tar -xz -C "$HOME/.local/bin" --strip-components=1 bin/buildctl
+          "$HOME/.local/bin/buildctl" --version
 
       - name: Clone gitops repo
         env:
