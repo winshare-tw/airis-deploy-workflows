@@ -30,6 +30,10 @@ image:
   tag: ""           # required (= .Values.instance)
   pullSecret: regcred
 
+# Container env vars (map of name → value).
+# Set via render.sh's ENV_KV (newline-separated KEY=VALUE).
+env: {}
+
 # Resources
 resources:
   cpu: "500m"

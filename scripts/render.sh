@@ -23,20 +23,32 @@ OUT_FILE="$OUT_DIR/$INSTANCE.yaml"
 
 mkdir -p "$OUT_DIR"
 
-helm template "$CHART_DIR" \
-  --set "app=$APP" \
-  --set "instance=$INSTANCE" \
-  --set "host=$HOST" \
-  --set "port=$PORT" \
-  --set "healthPath=${HEALTH_PATH:-/}" \
-  --set "alias=${ALIAS:-}" \
-  --set "promote=${PROMOTE:-true}" \
-  --set "expiresAt=$EXPIRES_AT" \
-  --set "image.registry=${IMAGE_REGISTRY:-ghcr.io/winshare-tw}" \
-  --set "image.tag=$IMAGE_TAG" \
-  --set "resources.cpu=${RES_CPU:-500m}" \
-  --set "resources.memory=${RES_MEM:-512Mi}" \
-  > "$OUT_FILE"
+# Build helm --set args. Env vars come from ENV_KV (newline-separated KEY=VALUE).
+helm_args=(
+  --set "app=$APP"
+  --set "instance=$INSTANCE"
+  --set "host=$HOST"
+  --set "port=$PORT"
+  --set "healthPath=${HEALTH_PATH:-/}"
+  --set "alias=${ALIAS:-}"
+  --set "promote=${PROMOTE:-true}"
+  --set "expiresAt=$EXPIRES_AT"
+  --set "image.registry=${IMAGE_REGISTRY:-ghcr.io/winshare-tw}"
+  --set "image.tag=$IMAGE_TAG"
+  --set "resources.cpu=${RES_CPU:-500m}"
+  --set "resources.memory=${RES_MEM:-512Mi}"
+)
+
+if [[ -n "${ENV_KV:-}" ]]; then
+  while IFS='=' read -r key val; do
+    [[ -z "$key" ]] && continue
+    # Helm --set treats `=` and `,` as special; rare in env values, but escape `,`
+    val=${val//,/\\,}
+    helm_args+=( --set-string "env.${key}=${val}" )
+  done <<<"$ENV_KV"
+fi
+
+helm template "$CHART_DIR" "${helm_args[@]}" > "$OUT_FILE"
 
 log "rendered: $OUT_FILE"
 log "expires-at: $EXPIRES_AT"

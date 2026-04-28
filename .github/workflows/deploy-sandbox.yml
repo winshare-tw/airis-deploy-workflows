@@ -39,6 +39,10 @@ on:
       image_registry:
         type: string
         default: "ghcr.io/winshare-tw"
+      env_kv:
+        type: string
+        default: ""
+        description: "Newline-separated KEY=VALUE pairs to inject as container env"
     outputs:
       host:
         description: "FQDN of the new sandbox"
@@ -172,6 +176,7 @@ jobs:
           IMAGE_REGISTRY: ${{ inputs.image_registry }}
           RES_CPU:        ${{ inputs.resources_cpu }}
           RES_MEM:        ${{ inputs.resources_mem }}
+          ENV_KV:         ${{ inputs.env_kv }}
           GITOPS_DIR:     ${{ github.workspace }}/gitops
         run: deploy-workflows/scripts/render.sh
 
