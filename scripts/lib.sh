@@ -25,19 +25,22 @@ clone_gitops() {
   chmod 600 "$key_file"
   printf '%s\n' "$GITOPS_SSH_KEY" > "$key_file"
 
-  # Trust github.com host key (avoid interactive prompt on first connect).
+  # Use ssh.github.com:443 — works in environments where outbound :22 is blocked
+  # (common in corporate / on-prem clusters). github.com itself works on 22, but
+  # the 443 endpoint is the safer default.
   mkdir -p "$HOME/.ssh"
-  ssh-keyscan -t rsa,ecdsa,ed25519 github.com 2>/dev/null >> "$HOME/.ssh/known_hosts"
+  ssh-keyscan -p 443 ssh.github.com 2>/dev/null >> "$HOME/.ssh/known_hosts" || true
 
-  GIT_SSH_COMMAND="ssh -i $key_file -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts" \
+  local SSH_CMD="ssh -i $key_file -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=accept-new -p 443"
+
+  GIT_SSH_COMMAND="$SSH_CMD" \
     git clone --depth 1 \
-      "git@github.com:winshare-tw/airis-gitops.git" \
+      "git@ssh.github.com:winshare-tw/airis-gitops.git" \
       "$dest"
 
   # Embed the same SSH command in the cloned repo's local config so subsequent
   # git push/fetch in this dir picks the deploy key without env propagation.
-  git -C "$dest" config core.sshCommand \
-    "ssh -i $key_file -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+  git -C "$dest" config core.sshCommand "$SSH_CMD"
   git -C "$dest" config user.email "deploy-bot@winshare.tw"
   git -C "$dest" config user.name  "airis-deploy-bot"
 }
