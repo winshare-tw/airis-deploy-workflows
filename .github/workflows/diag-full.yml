@@ -8,16 +8,24 @@ on:
       port:
         type: number
         required: true
+      dockerfile:
+        type: string
+        default: "Dockerfile"
+      context:
+        type: string
+        default: "."
+      health_path:
+        type: string
+        default: "/"
+      alias:
+        type: string
+        default: ""
+      zone:
+        type: string
+        default: "winshare.tw"
     outputs:
       host:
-        description: "FQDN"
         value: ${{ jobs.deploy.outputs.host }}
-      instance:
-        description: "tag"
-        value: ${{ jobs.deploy.outputs.instance }}
-      latest_host:
-        description: "alias"
-        value: ${{ jobs.deploy.outputs.latest_host }}
     secrets:
       GITOPS_SSH_KEY:
         required: false
@@ -25,12 +33,7 @@ jobs:
   deploy:
     runs-on: arc-winshare-default
     outputs:
-      host:        ${{ steps.h.outputs.host }}
-      instance:    ${{ steps.h.outputs.instance }}
-      latest_host: ${{ steps.h.outputs.latest_host }}
+      host: ${{ steps.h.outputs.host }}
     steps:
       - id: h
-        run: |
-          echo "host=hello.example.com" >> "$GITHUB_OUTPUT"
-          echo "instance=hello" >> "$GITHUB_OUTPUT"
-          echo "latest_host=" >> "$GITHUB_OUTPUT"
+        run: echo "host=hello" >> "$GITHUB_OUTPUT"
