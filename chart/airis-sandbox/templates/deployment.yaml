@@ -34,7 +34,6 @@ spec:
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret }}
       securityContext:
-        runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       containers:

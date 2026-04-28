@@ -60,7 +60,6 @@ spec:
       imagePullSecrets:
         - name: regcred
       securityContext:
-        runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       containers:
