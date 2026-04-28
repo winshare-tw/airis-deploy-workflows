@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # scripts/new-host.sh
-# Generates a unique sandbox host id.
+# Generates a unique sandbox host id from two distinct words.
 # Outputs (stdout, KEY=VAL one per line):
-#   HOST=<word>-<hex4>.<ZONE>
-#   INSTANCE=<word>-<hex4>
+#   HOST=<word>-<word>.<ZONE>
+#   INSTANCE=<word>-<word>
 #
 # Inputs (env):
 #   ZONE             (required)   e.g. winshare.tw
@@ -24,8 +24,16 @@ random_word() {
   shuf -n1 "$WORDS_FILE"
 }
 
-random_hex() {
-  openssl rand -hex 2
+# Two distinct words joined by dash. Falls back to allowing duplicate after
+# 5 tries so a single-word WORDS_FILE doesn't infinite-loop.
+random_pair() {
+  local w1 w2 i
+  w1=$(random_word)
+  for i in 1 2 3 4 5; do
+    w2=$(random_word)
+    [[ "$w2" != "$w1" ]] && break
+  done
+  printf '%s-%s' "$w1" "$w2"
 }
 
 candidate_collides() {
@@ -41,7 +49,7 @@ generate() {
       id="$RANDOMNESS_SEED"
       seed_used=1
     else
-      id="$(random_word)-$(random_hex)"
+      id="$(random_pair)"
     fi
     candidate_collides "$id" || { printf '%s\n' "$id"; return 0; }
   done

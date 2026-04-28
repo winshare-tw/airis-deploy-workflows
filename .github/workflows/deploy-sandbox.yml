@@ -9,7 +9,7 @@ on:
       port:           { type: number,  required: true }
       health_path:    { type: string,  default: "/" }
       alias:          { type: string,  default: "" }
-      zone:           { type: string,  default: "dev.winshare.tw" }
+      zone:           { type: string,  default: "winshare.tw" }
       ttl:            { type: string,  default: "7d" }
       promote:        { type: boolean, default: true }
       resources_cpu:  { type: string,  default: "500m" }
