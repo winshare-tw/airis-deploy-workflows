@@ -3,22 +3,52 @@ name: deploy-sandbox
 on:
   workflow_call:
     inputs:
-      app:            { type: string,  required: true }
-      dockerfile:     { type: string,  default: "Dockerfile" }
-      context:        { type: string,  default: "." }
-      port:           { type: number,  required: true }
-      health_path:    { type: string,  default: "/" }
-      alias:          { type: string,  default: "" }
-      zone:           { type: string,  default: "winshare.tw" }
-      ttl:            { type: string,  default: "7d" }
-      promote:        { type: boolean, default: true }
-      resources_cpu:  { type: string,  default: "500m" }
-      resources_mem:  { type: string,  default: "512Mi" }
-      image_registry: { type: string,  default: "ghcr.io/winshare-tw" }
+      app:
+        type: string
+        required: true
+      dockerfile:
+        type: string
+        default: "Dockerfile"
+      context:
+        type: string
+        default: "."
+      port:
+        type: number
+        required: true
+      health_path:
+        type: string
+        default: "/"
+      alias:
+        type: string
+        default: ""
+      zone:
+        type: string
+        default: "winshare.tw"
+      ttl:
+        type: string
+        default: "7d"
+      promote:
+        type: boolean
+        default: true
+      resources_cpu:
+        type: string
+        default: "500m"
+      resources_mem:
+        type: string
+        default: "512Mi"
+      image_registry:
+        type: string
+        default: "ghcr.io/winshare-tw"
     outputs:
-      host:        { description: "FQDN of the new sandbox", value: "${{ jobs.deploy.outputs.host }}" }
-      instance:    { description: "Instance id (= image tag)", value: "${{ jobs.deploy.outputs.instance }}" }
-      latest_host: { description: "alias.winshare.tw if promoted",  value: "${{ jobs.deploy.outputs.latest_host }}" }
+      host:
+        description: "FQDN of the new sandbox"
+        value: ${{ jobs.deploy.outputs.host }}
+      instance:
+        description: "Instance id (= image tag)"
+        value: ${{ jobs.deploy.outputs.instance }}
+      latest_host:
+        description: "alias.winshare.tw if promoted"
+        value: ${{ jobs.deploy.outputs.latest_host }}
     secrets:
       GITOPS_SSH_KEY:
         required: true
