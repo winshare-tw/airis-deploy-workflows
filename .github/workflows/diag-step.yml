@@ -1,0 +1,24 @@
+name: diag-step
+on:
+  workflow_call:
+    inputs:
+      app:
+        type: string
+        required: true
+      port:
+        type: number
+        required: true
+    outputs:
+      host:
+        value: ${{ jobs.deploy.outputs.host }}
+    secrets:
+      GITOPS_SSH_KEY:
+        required: false
+jobs:
+  deploy:
+    runs-on: arc-winshare-default
+    outputs:
+      host: ${{ steps.h.outputs.host }}
+    steps:
+      - id: h
+        run: echo "host=hello.example.com" >> "$GITHUB_OUTPUT"
