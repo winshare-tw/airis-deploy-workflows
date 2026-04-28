@@ -51,7 +51,7 @@ on:
         value: ${{ jobs.deploy.outputs.latest_host }}
     secrets:
       GITOPS_SSH_KEY:
-        required: true
+        required: false
 
 env:
   AIRIS_DEPLOY_REF: v1
