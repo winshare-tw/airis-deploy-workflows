@@ -54,6 +54,10 @@ on:
 jobs:
   deploy:
     runs-on: arc-winshare-default
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
     outputs:
       host:        ${{ steps.h.outputs.host }}
       instance:    ${{ steps.h.outputs.instance }}
