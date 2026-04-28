@@ -9,6 +9,7 @@ on:
       port:           { type: number,  required: true }
       health_path:    { type: string,  default: "/" }
       alias:          { type: string,  default: "" }
+      zone:           { type: string,  default: "dev.winshare.tw" }
       ttl:            { type: string,  default: "7d" }
       promote:        { type: boolean, default: true }
       resources_cpu:  { type: string,  default: "500m" }
@@ -81,7 +82,7 @@ jobs:
       - id: host
         name: Generate sandbox host
         env:
-          ZONE: winshare.tw
+          ZONE: ${{ inputs.zone }}
           AVOID_DIR: ${{ github.workspace }}/gitops/sandboxes/${{ inputs.app }}
         run: |
           set -e
@@ -90,7 +91,7 @@ jobs:
           echo "host=$HOST" >> "$GITHUB_OUTPUT"
           echo "instance=$INSTANCE" >> "$GITHUB_OUTPUT"
           if [ -n "${{ inputs.alias }}" ] && [ "${{ inputs.promote }}" = "true" ]; then
-            echo "latest_host=${{ inputs.alias }}.winshare.tw" >> "$GITHUB_OUTPUT"
+            echo "latest_host=${{ inputs.alias }}.${{ inputs.zone }}" >> "$GITHUB_OUTPUT"
           else
             echo "latest_host=" >> "$GITHUB_OUTPUT"
           fi
