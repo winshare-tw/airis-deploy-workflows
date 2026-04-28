@@ -108,7 +108,8 @@ jobs:
         env:
           GITOPS_SSH_KEY: ${{ secrets.GITOPS_SSH_KEY }}
         run: |
-          set -e
+          set -ex
+          [ -n "$GITOPS_SSH_KEY" ] && echo "GITOPS_SSH_KEY length=${#GITOPS_SSH_KEY}" || echo "EMPTY"
           source deploy-workflows/scripts/lib.sh
           clone_gitops "$GITHUB_WORKSPACE/gitops"
 
