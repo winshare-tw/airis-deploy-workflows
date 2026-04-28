@@ -20,7 +20,7 @@ on:
       instance:    { description: "Instance id (= image tag)", value: "${{ jobs.deploy.outputs.instance }}" }
       latest_host: { description: "alias.winshare.tw if promoted",  value: "${{ jobs.deploy.outputs.latest_host }}" }
     secrets:
-      GITOPS_TOKEN:
+      GITOPS_SSH_KEY:
         required: true
 
 permissions:
@@ -73,7 +73,7 @@ jobs:
 
       - name: Clone gitops repo
         env:
-          GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+          GITOPS_SSH_KEY: ${{ secrets.GITOPS_SSH_KEY }}
         run: |
           set -e
           source deploy-workflows/scripts/lib.sh

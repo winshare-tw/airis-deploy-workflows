@@ -13,14 +13,31 @@ require_env() {
 }
 
 # clone_gitops <dest_dir>
-# Clones airis-gitops into the dest dir using GITOPS_TOKEN.
+# Clones airis-gitops into the dest dir using GITOPS_SSH_KEY (write deploy key).
 clone_gitops() {
-  require_env GITOPS_TOKEN
+  require_env GITOPS_SSH_KEY
   local dest=$1
   rm -rf "$dest"
-  git clone --depth 1 \
-    "https://x-access-token:${GITOPS_TOKEN}@github.com/winshare-tw/airis-gitops.git" \
-    "$dest"
+
+  # Stash the SSH key in a 0600 file outside any git tree.
+  local key_file
+  key_file=$(mktemp)
+  chmod 600 "$key_file"
+  printf '%s\n' "$GITOPS_SSH_KEY" > "$key_file"
+
+  # Trust github.com host key (avoid interactive prompt on first connect).
+  mkdir -p "$HOME/.ssh"
+  ssh-keyscan -t rsa,ecdsa,ed25519 github.com 2>/dev/null >> "$HOME/.ssh/known_hosts"
+
+  GIT_SSH_COMMAND="ssh -i $key_file -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts" \
+    git clone --depth 1 \
+      "git@github.com:winshare-tw/airis-gitops.git" \
+      "$dest"
+
+  # Embed the same SSH command in the cloned repo's local config so subsequent
+  # git push/fetch in this dir picks the deploy key without env propagation.
+  git -C "$dest" config core.sshCommand \
+    "ssh -i $key_file -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
   git -C "$dest" config user.email "deploy-bot@winshare.tw"
   git -C "$dest" config user.name  "airis-deploy-bot"
 }

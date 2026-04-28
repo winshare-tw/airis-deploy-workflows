@@ -6,7 +6,7 @@ on:
       host:  { type: string,  required: true }
       force: { type: boolean, default: false }
     secrets:
-      GITOPS_TOKEN:
+      GITOPS_SSH_KEY:
         required: true
 
 env:
@@ -32,7 +32,7 @@ jobs:
 
       - name: Clone gitops
         env:
-          GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+          GITOPS_SSH_KEY: ${{ secrets.GITOPS_SSH_KEY }}
         run: |
           source deploy-workflows/scripts/lib.sh
           clone_gitops "$GITHUB_WORKSPACE/gitops"
