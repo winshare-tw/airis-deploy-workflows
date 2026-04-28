@@ -206,10 +206,34 @@ jobs:
           echo "::error::failed to push gitops repo after 3 retries"
           exit 1
 
+      - name: Smoke test — poll sandbox URL until 2xx
+        env:
+          HOST: ${{ steps.host.outputs.host }}
+        run: |
+          set -e
+          echo "Probing https://$HOST (Argo sync + pod startup; up to 6 min)..."
+          for i in $(seq 1 72); do
+            code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 "https://$HOST" || echo "000")
+            case "$code" in
+              2*|3*|404) echo "[$i/72] $code → alive"; exit 0 ;;
+            esac
+            echo "[$i/72] $code"
+            sleep 5
+          done
+          echo "::error::sandbox $HOST did not return 2xx/3xx/404 within 6 minutes"
+          exit 1
+
       - name: Summary
+        if: always()
         run: |
           {
-            echo "host:        ${{ steps.host.outputs.host }}"
-            echo "instance:    ${{ steps.host.outputs.instance }}"
-            echo "latest_host: ${{ steps.host.outputs.latest_host }}"
+            echo "## Deployed"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Sandbox | https://${{ steps.host.outputs.host }} |"
+            if [ -n "${{ steps.host.outputs.latest_host }}" ]; then
+              echo "| Latest alias | https://${{ steps.host.outputs.latest_host }} |"
+            fi
+            echo "| Instance | \`${{ steps.host.outputs.instance }}\` |"
+            echo "| Image | \`${{ inputs.image_registry }}/${{ inputs.app }}:${{ steps.host.outputs.instance }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
