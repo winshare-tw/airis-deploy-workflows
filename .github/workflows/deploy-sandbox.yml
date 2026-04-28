@@ -51,7 +51,7 @@ on:
         value: ${{ jobs.deploy.outputs.latest_host }}
     secrets:
       GITOPS_SSH_KEY:
-        required: false
+        required: true
 
 env:
   AIRIS_DEPLOY_REF: v1
@@ -60,9 +60,13 @@ jobs:
   deploy:
     runs-on: arc-winshare-default
     timeout-minutes: 20
-    permissions:
-      contents: read
-      packages: write
+    # NOTE: caller workflow MUST declare:
+    #   permissions:
+    #     contents: read
+    #     packages: write
+    # Declaring `permissions:` at this level breaks workflow_call when the
+    # caller's defaults are below the requested level (startup_failure with
+    # no logs). Caller-side declaration works around it.
     outputs:
       host:        ${{ steps.host.outputs.host }}
       instance:    ${{ steps.host.outputs.instance }}
