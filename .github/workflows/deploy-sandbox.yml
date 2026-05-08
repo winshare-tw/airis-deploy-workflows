@@ -189,15 +189,35 @@ jobs:
           GITOPS_DIR:      ${{ github.workspace }}/gitops
         run: deploy-workflows/scripts/promote.sh
 
+      # Housekeeping: drop sibling sandbox manifests whose `expires-at` is in
+      # the past. Without this, sandbox-gc deletes the cluster objects every
+      # 30 min and ArgoCD self-heals them right back from the file we left
+      # behind — a 30-min ping-pong the in-cluster GC alone cannot escape.
+      - id: sweep
+        name: Sweep expired sandbox manifests
+        env:
+          APP:        ${{ inputs.app }}
+          INSTANCE:   ${{ steps.host.outputs.instance }}
+          GITOPS_DIR: ${{ github.workspace }}/gitops
+        run: deploy-workflows/scripts/sweep.sh
+
       - name: Commit and push to gitops
+        env:
+          SWEPT: ${{ steps.sweep.outputs.swept }}
         run: |
           set -e
           cd "$GITHUB_WORKSPACE/gitops"
-          git add sandboxes/${{ inputs.app }}/
+          # `-A` so deletions performed by sweep.sh are staged alongside the
+          # new manifest just rendered by render.sh.
+          git add -A sandboxes/${{ inputs.app }}/
           if git diff --staged --quiet; then
             echo "no manifest changes (sandbox already exists?)"; exit 1
           fi
-          git commit -m "deploy(${{ inputs.app }}): ${{ steps.host.outputs.instance }} (promote=${{ inputs.promote }})"
+          msg="deploy(${{ inputs.app }}): ${{ steps.host.outputs.instance }} (promote=${{ inputs.promote }})"
+          if [ "${SWEPT:-0}" -gt 0 ]; then
+            msg="$msg + sweep ${SWEPT} expired"
+          fi
+          git commit -m "$msg"
           for attempt in 1 2 3; do
             if git push origin HEAD:main; then exit 0; fi
             git fetch origin main
